@@ -1,0 +1,157 @@
+create table USERINFO(Aid INT PRIMARY KEY,userID INT,password VARCHAR(20),age INT,Name VARCHAR(20),Dno INT,pincode INT,state VARCHAR(20),city VARCHAR(20),street VARCHAR(20),isten INT,isown INT,isman INT);
+
+create table PROPINFO(propID INT PRIMARY KEY,plinth_Ar INT,TotAr INT,Year_of_Cons INT,Addr VARCHAR(20),No_of_floor INT,Date_avail VARCHAR(20),loc VARCHAR(20),rpm INT,No_of_rooms INT,manid INT,ownid INT,FOREIGN KEY(manid) REFERENCES USERINFO(Aid),FOREIGN KEY(ownid) REFERENCES USERINFO(Aid));
+
+create table tenantDet(ten_id INT,proid INT,stDate VARCHAR(20),EndDate VARCHAR(20),Agency VARCHAR(20),rpm INT,hike INT,FOREIGN KEY(ten_id) REFERENCES USERINFO(Aid),FOREIGN KEY(proid) REFERENCES PROPINFO(propid));
+
+Alter table PROPINFO ADD is_resi INT;
+
+Alter table PROPINFO ADD is_comer INT;
+
+Alter table PROPINFO modify plinth_ar INT NOT NULL; 
+
+Alter table PROPINFO modify totar INT NOT NULL;
+
+Alter table USERINFO ADD phoneNum VARCHAR(20) NOT NULL;
+
+Alter table PROPINFO modify Year_of_cons INT NOT NULL;
+
+
+1. Stored Procedure for insert property record
+
+create or replace procedure InsertPropertyRecord(a in number,b in number,c in number,d in number,e in varchar2,f in number,g in varchar2,h in varchar2,i in number,j in number,k in number,l in number,m in number,n in number) as
+begin
+insert into PropInfo values(a,b,c,d,e,f,g,h,i,j,k,l,m,n);
+end;
+/
+
+2. Stored procedure for get property records
+
+create or replace procedure GetPropertyRecords(owid in number) as
+pid number;
+plar number;
+tar number;
+yoc number;
+aaa varchar2(20);
+nof number;      
+dav varchar2(20);
+l varchar2(20);
+rent number;     
+nor number;
+mid number;
+isr number;
+isc number;
+cursor poptab is
+select propid,plinth_ar,totar,year_of_cons,addr,no_of_floor,date_avail,loc,rpm,no_of_rooms,manid,is_resi,is_comer from propinfo where ownid=owid;
+begin
+open poptab;
+loop
+fetch poptab into pid,plar,tar,yoc,aaa,nof,dav,l,rent,nor,mid,isr,isc;
+exit when poptab%notfound;
+dbms_output.put_line('Property Id:'||pid||' Plinth Area:'||plar||' Total Area:'||tar||' Year of Construction:'||yoc||' Address:'||aaa||' No of Floors: '||nof||' Date Available:'||dav||' Locality:'||l||' Rent:'||rent||' No of Rooms:'||nor||' Manager Id:'||mid||' Comms:'||nor||' Manager Id:'||mid||' Commercial:'||isc||' Residental:'||isr);
+end loop;
+close poptab;
+end;
+/
+
+3. Stored property to get tenant details
+
+create or replace procedure GetTenantDetails(p_property_id in number) as
+v_tenant_id number;
+v_st_date VARCHAR2(20);
+v_end_date VARCHAR2(20);
+v_agency VARCHAR2(20);
+v_rent_per_month number;
+v_rent_hike number;
+cursor tenrec is
+SELECT ten_id, stDate, EndDate, Agency, rpm, hike FROM tenantDet WHERE proid = p_property_id;
+begin
+open tenrec;
+DBMS_OUTPUT.PUT_LINE('Tenant Details for Property ID: ' || p_property_id);
+DBMS_OUTPUT.PUT_LINE('----------------------------------------');   
+LOOP
+fetch tenrec into v_tenant_id,v_st_date,v_end_date,v_agency,v_rent_per_month,v_rent_hike;
+exit when tenrec%notfound;
+DBMS_OUTPUT.PUT_LINE('Tenant ID: ' || v_tenant_id);
+DBMS_OUTPUT.PUT_LINE('Start Date: ' || v_st_date);
+DBMS_OUTPUT.PUT_LINE('End Date: ' || v_end_date);
+DBMS_OUTPUT.PUT_LINE('Agency: ' || v_agency);
+DBMS_OUTPUT.PUT_LINE('Rent per Month: ' || v_rent_per_month);
+DBMS_OUTPUT.PUT_LINE('Rent Hike: ' || v_rent_hike);
+DBMS_OUTPUT.PUT_LINE('----------------------------------------');
+END LOOP;
+END;
+/
+
+
+
+4. Stored property to create a new user
+
+create or replace procedure CreateNewUser(a in number,b in number,c in varchar2,d in number,e in varchar2,f in number,g in number,h in varchar2,i in varchar2,j in varchar2,k in number,l in number,m in number,n in varchar2) as
+begin
+insert into userinfo values(a,b,c,d,e,f,g,h,i,j,k,l,m,n);
+end;
+/
+
+5. Stored procedure to searh property for rent
+
+create or replace procedure SearchPropertyForRent(locality in varchar2) as      
+pid number;
+plar number;
+tar number;
+yoc number;
+aaa varchar2(20);
+nof number;
+dav varchar2(20);
+rent number;
+nor number;
+mid number;
+oid number;
+isr number;
+isc number;
+cursor poptab is
+select propid,plinth_ar,totar,year_of_cons,addr,no_of_floor,date_avail,rpm,no_of_rooms,manid,ownid,is_resi,is_comer from propinfo where loc=locality;
+begin
+open poptab;
+loop
+fetch poptab into pid,plar,tar,yoc,aaa,nof,dav,rent,nor,mid,oid,isr,isc;
+exit when poptab%notfound;
+dbms_output.put_line('Property Id:'||pid||' Plinth Area:'||plar||' Total Area:'||tar||' Year of Construction:'||yoc||' Address:'||aaa||' No of Floors: '||nof||' Date Available:'||dav||' Owner Id:'||oid||' Rent:'||rent||' No of 
+Rooms:'||nor||' Manager Id:'||mid||' Comms:'||nor||' Manager Id:'||mid||' Commercial:'||isc||' Residental:'||isr);
+end loop;
+close poptab;
+end;
+/
+
+
+6. Get rent history given a property
+
+
+CREATE OR REPLACE PROCEDURE GetRentHistory(p_property_id in number) AS
+  st_date tenantDet.stDate%TYPE;
+  end_date tenantDet.EndDate%TYPE;
+  agency tenantDet.Agency%TYPE;
+  rent_per_month PROPINFO.rpm%TYPE;
+  rent_hike tenantDet.hike%TYPE;
+  
+  CURSOR rent_history_cur IS
+    SELECT td.stDate, td.EndDate, td.Agency, pi.rpm, td.hike
+    FROM tenantDet td
+    INNER JOIN propinfo pi ON td.proid = pi.propID
+    WHERE td.proid = p_property_id;
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Rent History for Property ID: ' || p_property_id);
+  DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+  
+  OPEN rent_history_cur;
+  
+  LOOP
+    FETCH rent_history_cur INTO st_date, end_date, agency, rent_per_month, rent_hike;
+    EXIT WHEN rent_history_cur%NOTFOUND;
+    
+    DBMS_OUTPUT.PUT_LINE('Start Date: ' || st_date || ' | End Date: ' || end_date || ' | Agency: ' || agency || ' | Rent Per Month: ' || rent_per_month || ' | Rent Hike: ' || rent_hike);
+  END LOOP;
+  
+  CLOSE rent_history_cur;
+END;
+/
